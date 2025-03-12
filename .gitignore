@@ -1,0 +1,18 @@
+# Evita di tracciare gli ambienti virtuali
+venv/
+env/
+
+# File di dipendenze compilati
+*.pyc
+__pycache__/
+*.pyo
+*.pyd
+
+# Configurazioni ed eseguibili locali
+.DS_Store
+.vscode/
+.idea/
+*.log
+
+# File di dipendenze generati
+requirements.txt
