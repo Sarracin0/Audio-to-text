@@ -55,6 +55,23 @@ claude_client = anthropic.Anthropic(api_key=os.getenv('ANTHROPIC_API_KEY'))
 # Thread pool per operazioni CPU intensive
 executor = ThreadPoolExecutor(max_workers=2)
 
+def serialize_firestore_data(data: dict) -> dict:
+    """Converte i tipi Firestore in tipi JSON serializzabili"""
+    serialized = {}
+    for key, value in data.items():
+        # Gestisce DatetimeWithNanoseconds
+        if hasattr(value, 'isoformat'):
+            serialized[key] = value.isoformat()
+        # Gestisce altri tipi datetime
+        elif isinstance(value, datetime):
+            serialized[key] = value.isoformat()
+        # Salta i campi timestamp server-side che potrebbero essere None
+        elif key == 'timestamp' and value is None:
+            continue
+        else:
+            serialized[key] = value
+    return serialized
+
 @app.get("/")
 async def root():
     return {"message": "Whisper Claude Notes API", "status": "online"}
@@ -156,12 +173,15 @@ async def transcribe_audio(
 async def get_notes(limit: int = 20):
     """Recupera le note salvate"""
     try:
-        notes_ref = db.collection('notes').order_by('timestamp', direction=firestore.Query.DESCENDING).limit(limit)
+        # Ordina per created_at invece di timestamp per evitare problemi
+        notes_ref = db.collection('notes').order_by('created_at', direction=firestore.Query.DESCENDING).limit(limit)
         docs = notes_ref.stream()
         
         notes = []
         for doc in docs:
             note_data = doc.to_dict()
+            # Serializza i dati Firestore
+            note_data = serialize_firestore_data(note_data)
             note_data['id'] = doc.id
             notes.append(note_data)
         
@@ -169,7 +189,26 @@ async def get_notes(limit: int = 20):
         
     except Exception as e:
         print(f"Errore nel recupero note: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        # Se il problema è l'ordinamento, prova senza ordinamento
+        try:
+            notes_ref = db.collection('notes').limit(limit)
+            docs = notes_ref.stream()
+            
+            notes = []
+            for doc in docs:
+                note_data = doc.to_dict()
+                # Serializza i dati Firestore
+                note_data = serialize_firestore_data(note_data)
+                note_data['id'] = doc.id
+                notes.append(note_data)
+            
+            # Ordina manualmente per created_at se esiste
+            notes.sort(key=lambda x: x.get('created_at', ''), reverse=True)
+            
+            return JSONResponse({"success": True, "notes": notes})
+        except Exception as fallback_error:
+            print(f"Errore anche nel fallback: {str(fallback_error)}")
+            raise HTTPException(status_code=500, detail=str(fallback_error))
 
 @app.get("/api/note/{note_id}")
 async def get_note(note_id: str):
@@ -182,6 +221,8 @@ async def get_note(note_id: str):
             raise HTTPException(status_code=404, detail="Nota non trovata")
         
         note_data = doc.to_dict()
+        # Serializza i dati Firestore
+        note_data = serialize_firestore_data(note_data)
         note_data['id'] = doc.id
         
         return JSONResponse({"success": True, "note": note_data})
