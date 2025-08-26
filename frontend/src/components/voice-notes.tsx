@@ -15,7 +15,6 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog'
 import { apiService, Note, TranscriptionResponse } from '@/lib/api'
-import { config } from '@/lib/config'
 import { cn } from '@/lib/utils'
 
 // Dynamic import per MD Editor (non supporta SSR)
@@ -26,6 +25,27 @@ const MDEditor = dynamic(
     loading: () => <div className="h-96 bg-muted animate-pulse rounded-lg" />
   }
 )
+
+// Configurazione file audio supportati
+const FILE_CONFIG = {
+  maxFileSize: 25 * 1024 * 1024, // 25MB
+  supportedFormats: [
+    'audio/mpeg',
+    'audio/wav', 
+    'audio/mp4',
+    'audio/flac',
+    'audio/ogg',
+    'audio/aac'
+  ],
+  supportedExtensions: [
+    '.mp3',
+    '.wav',
+    '.m4a',
+    '.flac',
+    '.ogg',
+    '.aac'
+  ]
+}
 
 interface ProcessingStatus {
   isProcessing: boolean
@@ -72,8 +92,8 @@ export default function VoiceNotes() {
 
   const handleFileSelect = (file: File) => {
     // Validazione formato
-    const isValidType = config.supportedFormats.some(format => file.type === format) ||
-      config.supportedExtensions.some(ext => file.name.toLowerCase().endsWith(ext))
+    const isValidType = FILE_CONFIG.supportedFormats.some(format => file.type === format) ||
+      FILE_CONFIG.supportedExtensions.some(ext => file.name.toLowerCase().endsWith(ext))
 
     if (!isValidType) {
       alert('Formato file non supportato. Usa MP3, WAV, M4A, FLAC, OGG o AAC.')
@@ -81,8 +101,8 @@ export default function VoiceNotes() {
     }
 
     // Validazione dimensione
-    if (file.size > config.maxFileSize) {
-      alert(`File troppo grande. Dimensione massima: ${config.maxFileSize / 1024 / 1024}MB`)
+    if (file.size > FILE_CONFIG.maxFileSize) {
+      alert(`File troppo grande. Dimensione massima: ${FILE_CONFIG.maxFileSize / 1024 / 1024}MB`)
       return
     }
 
@@ -165,7 +185,6 @@ export default function VoiceNotes() {
     if (!currentNoteId) return
 
     try {
-      // Log per debug
       console.log('Salvataggio nota:', currentNoteId)
       console.log('Testo da salvare:', processedText)
       

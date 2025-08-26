@@ -1,3 +1,6 @@
+// Configurazione semplice - cambia questo URL con quello del tuo backend
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000'
+
 export interface TranscriptionResponse {
   success: boolean
   id: string
@@ -29,50 +32,46 @@ export interface NoteResponse {
 }
 
 class ApiService {
-  // Usa le API route locali invece di chiamare direttamente il backend
-  // Questo permette di nascondere l'URL del backend e gestirlo server-side
+  // Chiamate dirette al backend Python - semplice e funzionale
   
   async transcribeAudio(file: File, promptType: 'linkedin' | 'general' = 'linkedin'): Promise<TranscriptionResponse> {
     const formData = new FormData()
     formData.append('file', file)
 
-    const response = await fetch(`/api/transcribe?prompt_type=${promptType}`, {
+    const response = await fetch(`${BACKEND_URL}/api/transcribe?prompt_type=${promptType}`, {
       method: 'POST',
       body: formData,
     })
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => null)
-      throw new Error(errorData?.error || 'Errore durante la trascrizione')
+      throw new Error('Errore durante la trascrizione')
     }
 
     return response.json()
   }
 
   async getNotes(limit: number = 20): Promise<NotesResponse> {
-    const response = await fetch(`/api/notes?limit=${limit}`)
+    const response = await fetch(`${BACKEND_URL}/api/notes?limit=${limit}`)
     
     if (!response.ok) {
-      const errorData = await response.json().catch(() => null)
-      throw new Error(errorData?.error || 'Errore nel caricamento delle note')
+      throw new Error('Errore nel caricamento delle note')
     }
 
     return response.json()
   }
 
   async getNote(noteId: string): Promise<NoteResponse> {
-    const response = await fetch(`/api/notes/${noteId}`)
+    const response = await fetch(`${BACKEND_URL}/api/note/${noteId}`)
     
     if (!response.ok) {
-      const errorData = await response.json().catch(() => null)
-      throw new Error(errorData?.error || 'Nota non trovata')
+      throw new Error('Nota non trovata')
     }
 
     return response.json()
   }
 
   async updateNote(noteId: string, processedText: string): Promise<{ success: boolean; message: string }> {
-    const response = await fetch(`/api/notes/${noteId}`, {
+    const response = await fetch(`${BACKEND_URL}/api/note/${noteId}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -81,9 +80,7 @@ class ApiService {
     })
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => null)
-      console.error('Update note error response:', errorData)
-      throw new Error(errorData?.error || 'Errore durante il salvataggio')
+      throw new Error('Errore durante il salvataggio')
     }
 
     return response.json()
