@@ -9,34 +9,38 @@ Trascrivi accuratamente includendo la punteggiatura appropriata."""
 # Prompt principale per Claude - trasforma in post LinkedIn
 CLAUDE_LINKEDIN_PROMPT = """Il tuo compito è aiutarmi a scrivere contenuti per LinkedIn in modo più veloce.  
 Riceverai come input una trascrizione vocale o un testo grezzo, che può essere disordinato, colloquiale e senza formattazione.  
+
 Il tuo obiettivo è trasformarlo in un post LinkedIn ben scritto, scorrevole e fedele al mio stile.  
 Devi mantenere il contenuto originale, senza aggiungere opinioni o informazioni inventate.  
 Il valore, i pensieri e le riflessioni devono restare miei: tu fai solo editing, formattazione e ottimizzazione narrativa.  
 
 ### Linee guida di scrittura
-- **Tono**: equilibrato tra professionale e colloquiale → mai troppo "markettaro" o promozionale.  
+- **Tono**: equilibrato tra professionale e colloquiale → mai troppo “markettaro” o promozionale.  
 - **Stile narrativo**: discorsivo, chiaro, fluido.  
   - Alterna paragrafi brevi e punti elenco → NO muri di testo, NO solo liste.  
-  - Mantieni uno stile da "racconto" con ritmo naturale.  
-- **Espressioni tipiche**: inserisci espressioni colloquiali quando ha senso ("mah", "capitemi...", "una figata", "fidati", ecc.) per rendere il post autentico.  
+  - Mantieni uno stile da “racconto” con ritmo naturale.  
+- **Espressioni tipiche**: inserisci espressioni colloquiali quando ha senso (“mah”, “capitemi...”, “una figata”, “fidati”, ecc.) per rendere il post autentico.  
 - **Struttura consigliata** (adatta in base al contenuto grezzo che ti passo):
-  1. Una frase iniziale d'impatto o curiosa per attirare attenzione.  
+  1. Una frase iniziale d’impatto o curiosa per attirare attenzione.  
   2. Breve contesto o storia personale.  
   3. Il problema o la difficoltà affrontata.  
-  4. La soluzione, il ragionamento o l'insight principale (anche con elenco numerato o puntato).  
+  4. La soluzione, il ragionamento o l’insight principale (anche con elenco numerato o puntato).  
   5. Una chiusura che invita alla riflessione o al confronto → spesso con una domanda diretta al lettore.  
 
 ### Cosa NON fare
 - Non aggiungere nuove idee che non emergono dal testo originale.  
-- Non scrivere in stile troppo "pubblicitario" o artificiale.  
+- Non scrivere in stile troppo “pubblicitario” o artificiale.  
 - Non rendere il post telegrafico: deve sembrare un flusso naturale di pensiero.  
+
+Risultato atteso: un post LinkedIn curato, leggibile e pronto alla pubblicazione, che conserva la mia voce e le mie opinioni ma in una forma chiara ed efficace.
+
 
 ### Trascrizione da elaborare:
 
 {transcription}
 
 ### Output:
-Risultato atteso: un post LinkedIn curato, leggibile e pronto alla pubblicazione, che conserva la mia voce e le mie opinioni ma in una forma chiara ed efficace."""
+Risultato atteso: un post LinkedIn curato, leggibile e pronto alla pubblicazione, che conserva la mia voce e le mie opinioni ma in una forma chiara ed efficace. Il post deve essere tra i 2000 e i 3000 caratteri"""
 
 # Prompt alternativo per note generali (non LinkedIn)
 CLAUDE_GENERAL_PROMPT = """Sei un assistente intelligente che analizza trascrizioni di note vocali.
