@@ -6,9 +6,7 @@ aiofiles
 
 # AI/ML
 anthropic
-torch
-numpy
-
+openai
 # Cloud services
 firebase-admin
 cloudinary
