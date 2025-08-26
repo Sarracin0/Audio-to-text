@@ -85,6 +85,18 @@ class ApiService {
 
     return response.json()
   }
+
+  async deleteNote(noteId: string): Promise<{ success: boolean; message: string }> {
+    const response = await fetch(`${BACKEND_URL}/api/note/${noteId}`, {
+      method: 'DELETE',
+    })
+
+    if (!response.ok) {
+      throw new Error('Errore durante l\'eliminazione')
+    }
+
+    return response.json()
+  }
 }
 
 export const apiService = new ApiService()

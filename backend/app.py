@@ -16,6 +16,8 @@ from dotenv import load_dotenv
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
 from prompts import WHISPER_PROMPT, get_prompt  # Importa i prompt
+from urllib.parse import urlparse
+import re
 
 # Carica variabili d'ambiente
 load_dotenv()
@@ -71,6 +73,45 @@ def serialize_firestore_data(data: dict) -> dict:
         else:
             serialized[key] = value
     return serialized
+
+def extract_cloudinary_public_id(cloudinary_url: str) -> Optional[str]:
+    """
+    Estrae il public_id da un URL Cloudinary
+    
+    Esempio URL: https://res.cloudinary.com/dxxxxx/video/upload/v1234567890/voice_notes/audio_20240101_120000_test.mp3
+    Ritorna: voice_notes/audio_20240101_120000_test
+    """
+    try:
+        # Parse dell'URL
+        parsed = urlparse(cloudinary_url)
+        path_parts = parsed.path.split('/')
+        
+        # Trova l'indice di 'upload' nel path
+        if 'upload' in path_parts:
+            upload_index = path_parts.index('upload')
+            # Il public_id è tutto dopo 'upload' e la versione (v + numeri)
+            # Salta la versione se presente (formato: v1234567890)
+            start_index = upload_index + 1
+            if path_parts[start_index].startswith('v') and path_parts[start_index][1:].isdigit():
+                start_index += 1
+            
+            # Unisci le parti rimanenti per ottenere il public_id
+            # Rimuovi l'estensione del file dall'ultimo elemento
+            public_id_parts = path_parts[start_index:]
+            if public_id_parts:
+                # Rimuovi estensione dall'ultimo elemento
+                last_part = public_id_parts[-1]
+                # Rimuovi tutto dopo l'ultimo punto (estensione)
+                last_part_without_ext = last_part.rsplit('.', 1)[0]
+                public_id_parts[-1] = last_part_without_ext
+                
+                public_id = '/'.join(public_id_parts)
+                return public_id
+        
+        return None
+    except Exception as e:
+        print(f"Errore nell'estrazione del public_id: {str(e)}")
+        return None
 
 @app.get("/")
 async def root():
@@ -263,6 +304,43 @@ async def update_note(note_id: str, request: Request):
         raise
     except Exception as e:
         print(f"Errore nell'aggiornamento nota {note_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/api/note/{note_id}")
+async def delete_note(note_id: str):
+    """Elimina una nota dal database e il file audio da Cloudinary"""
+    try:
+        doc_ref = db.collection('notes').document(note_id)
+        doc = doc_ref.get()
+        
+        if not doc.exists:
+            raise HTTPException(status_code=404, detail="Nota non trovata")
+        
+        # Recupera i dati prima di eliminare per ottenere l'URL audio
+        note_data = doc.to_dict()
+        
+        # Elimina l'audio da Cloudinary se presente
+        if 'audio_url' in note_data and note_data['audio_url']:
+            public_id = extract_cloudinary_public_id(note_data['audio_url'])
+            if public_id:
+                try:
+                    # Elimina da Cloudinary
+                    result = cloudinary.uploader.destroy(public_id, resource_type="video")
+                    print(f"Eliminazione audio Cloudinary - public_id: {public_id}, risultato: {result}")
+                except Exception as cloud_error:
+                    # Log dell'errore ma continua con l'eliminazione della nota
+                    print(f"Errore nell'eliminazione audio da Cloudinary: {str(cloud_error)}")
+        
+        # Elimina il documento da Firestore
+        doc_ref.delete()
+        
+        print(f"Nota {note_id} eliminata con successo")
+        return JSONResponse({"success": True, "message": "Nota e audio eliminati"})
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Errore nell'eliminazione nota {note_id}: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
