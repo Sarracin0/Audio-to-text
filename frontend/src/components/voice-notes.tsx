@@ -54,10 +54,19 @@ export default function VoiceNotes() {
 
   const loadNotes = async () => {
     try {
+      console.log('Caricamento note...')
       const response = await apiService.getNotes()
-      setNotes(response.notes)
+      console.log('Note ricevute:', response)
+      
+      if (response.notes && Array.isArray(response.notes)) {
+        setNotes(response.notes)
+      } else {
+        console.error('Formato risposta non valido:', response)
+        setNotes([])
+      }
     } catch (error) {
       console.error('Errore nel caricamento note:', error)
+      setNotes([])
     }
   }
 
@@ -156,7 +165,14 @@ export default function VoiceNotes() {
     if (!currentNoteId) return
 
     try {
+      // Log per debug
+      console.log('Salvataggio nota:', currentNoteId)
+      console.log('Testo da salvare:', processedText)
+      
       await apiService.updateNote(currentNoteId, processedText)
+
+      // Ricarica lista note dopo salvataggio
+      await loadNotes()
 
       // Feedback visivo
       const button = document.activeElement as HTMLButtonElement
@@ -170,8 +186,8 @@ export default function VoiceNotes() {
         }, 2000)
       }
     } catch (error) {
-      console.error('Errore nel salvataggio:', error)
-      alert('Errore durante il salvataggio')
+      console.error('Errore dettagliato nel salvataggio:', error)
+      alert(`Errore durante il salvataggio: ${error instanceof Error ? error.message : 'Errore sconosciuto'}`)
     }
   }
 
