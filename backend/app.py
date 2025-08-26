@@ -15,6 +15,7 @@ import cloudinary.uploader
 from dotenv import load_dotenv
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
+from prompts import WHISPER_PROMPT, get_prompt  # Importa i prompt
 
 # Carica variabili d'ambiente
 load_dotenv()
@@ -54,30 +55,15 @@ claude_client = anthropic.Anthropic(api_key=os.getenv('ANTHROPIC_API_KEY'))
 # Thread pool per operazioni CPU intensive
 executor = ThreadPoolExecutor(max_workers=2)
 
-# Prompt hardcoded per Claude
-CLAUDE_PROMPT = """Sei un assistente intelligente che analizza trascrizioni di note vocali.
-Il tuo compito è:
-1. Correggere eventuali errori di trascrizione
-2. Strutturare il contenuto in modo chiaro e organizzato
-3. Identificare punti chiave e azioni da intraprendere
-4. Fornire un riassunto conciso alla fine
-
-Trascrizione da analizzare:
-
-{transcription}
-
-Per favore, elabora questa nota vocale e restituisci una versione migliorata e strutturata."""
-
-# Prompt per migliorare la trascrizione Whisper
-WHISPER_PROMPT = """Questa è una nota vocale personale in italiano. 
-Trascrivi accuratamente includendo la punteggiatura appropriata."""
-
 @app.get("/")
 async def root():
     return {"message": "Whisper Claude Notes API", "status": "online"}
 
 @app.post("/api/transcribe")
-async def transcribe_audio(file: UploadFile = File(...)):
+async def transcribe_audio(
+    file: UploadFile = File(...), 
+    prompt_type: str = "linkedin"  # Parametro per scegliere il tipo di prompt
+):
     """Endpoint per trascrivere audio con Whisper e processare con Claude"""
     
     if not file.filename.endswith(('.mp3', '.wav', '.m4a', '.flac', '.ogg', '.aac')):
@@ -121,14 +107,16 @@ async def transcribe_audio(file: UploadFile = File(...)):
         transcription = transcription_response
         print(f"Trascrizione completata: {len(transcription)} caratteri")
         
-        # Processa con Claude
+        # Processa con Claude usando il prompt selezionato
+        claude_prompt = get_prompt(prompt_type)
+        
         claude_response = claude_client.messages.create(
             model="claude-3-5-sonnet-20241022",
             max_tokens=2000,
             messages=[
                 {
                     "role": "user",
-                    "content": CLAUDE_PROMPT.format(transcription=transcription)
+                    "content": claude_prompt.format(transcription=transcription)
                 }
             ]
         )
@@ -141,6 +129,7 @@ async def transcribe_audio(file: UploadFile = File(...)):
             "audio_url": audio_url,
             "transcription": transcription,
             "processed_text": processed_text,
+            "prompt_type": prompt_type,  # Salva il tipo di prompt usato
             "created_at": datetime.now().isoformat(),
             "timestamp": firestore.SERVER_TIMESTAMP
         }

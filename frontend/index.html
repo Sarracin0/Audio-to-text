@@ -88,6 +88,21 @@
         <div id="uploadSection" class="bg-white rounded-2xl shadow-sm p-8 mb-8 fade-in">
             <h2 class="text-2xl font-semibold mb-6 text-gray-800">Carica nota vocale</h2>
             
+            <!-- Selezione tipo di elaborazione -->
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Tipo di elaborazione:</label>
+                <div class="flex gap-4">
+                    <label class="flex items-center cursor-pointer">
+                        <input type="radio" name="promptType" value="linkedin" checked class="mr-2">
+                        <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-lg">📱 Post LinkedIn</span>
+                    </label>
+                    <label class="flex items-center cursor-pointer">
+                        <input type="radio" name="promptType" value="general" class="mr-2">
+                        <span class="bg-gray-100 text-gray-800 px-3 py-1 rounded-lg">📝 Nota generale</span>
+                    </label>
+                </div>
+            </div>
+            
             <div id="dropzone" class="border-2 border-dashed border-gray-300 rounded-xl p-12 text-center cursor-pointer hover:border-blue-400 transition-colors">
                 <svg class="w-16 h-16 mx-auto mb-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
@@ -126,9 +141,14 @@
             <div class="bg-white rounded-2xl shadow-sm p-8 fade-in">
                 <div class="flex justify-between items-center mb-6">
                     <h3 class="text-xl font-semibold text-gray-800">Testo elaborato</h3>
-                    <button onclick="saveChanges()" class="bg-green-500 text-white px-6 py-2 rounded-lg hover:bg-green-600 transition-colors">
-                        Salva modifiche
-                    </button>
+                    <div class="flex gap-2">
+                        <button onclick="copyToClipboard()" class="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 transition-colors">
+                            📋 Copia
+                        </button>
+                        <button onclick="saveChanges()" class="bg-green-500 text-white px-6 py-2 rounded-lg hover:bg-green-600 transition-colors">
+                            💾 Salva modifiche
+                        </button>
+                    </div>
                 </div>
                 <div id="editor" class="bg-white rounded-lg"></div>
             </div>
@@ -156,7 +176,7 @@
         // Configurazione API
         const API_URL = window.location.hostname === 'localhost' 
             ? 'http://localhost:8000' 
-            : 'https://audio-to-text-86o5.onrender.com'; // Sostituisci con il tuo URL Render
+            : 'https://your-backend.onrender.com'; // Sostituisci con il tuo URL Render
         
         let selectedFile = null;
         let currentNoteId = null;
@@ -227,6 +247,9 @@
         async function processAudio() {
             if (!selectedFile) return;
             
+            // Ottieni il tipo di prompt selezionato
+            const promptType = document.querySelector('input[name="promptType"]:checked').value;
+            
             // Mostra stato processing
             document.getElementById('uploadSection').classList.add('hidden');
             document.getElementById('processingStatus').classList.remove('hidden');
@@ -235,10 +258,10 @@
             formData.append('file', selectedFile);
             
             try {
-                // Step 1: Upload e trascrizione
+                // Step 1: Upload e trascrizione con il tipo di prompt
                 updateStatus('Trascrizione audio con Whisper...');
                 
-                const response = await fetch(`${API_URL}/api/transcribe`, {
+                const response = await fetch(`${API_URL}/api/transcribe?prompt_type=${promptType}`, {
                     method: 'POST',
                     body: formData
                 });
@@ -278,6 +301,28 @@
             
             // Imposta il contenuto nell'editor
             quillEditor.root.innerHTML = data.processed.replace(/\n/g, '<br>');
+        }
+        
+        function copyToClipboard() {
+            // Ottieni il testo dall'editor Quill
+            const text = quillEditor.getText();
+            
+            // Copia negli appunti
+            navigator.clipboard.writeText(text).then(() => {
+                // Feedback visivo
+                const btn = event.target;
+                const originalText = btn.innerHTML;
+                btn.innerHTML = '✅ Copiato!';
+                btn.classList.add('bg-blue-600');
+                
+                setTimeout(() => {
+                    btn.innerHTML = originalText;
+                    btn.classList.remove('bg-blue-600');
+                }, 2000);
+            }).catch(err => {
+                console.error('Errore nella copia:', err);
+                alert('Errore durante la copia');
+            });
         }
         
         async function saveChanges() {
