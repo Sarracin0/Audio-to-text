@@ -123,20 +123,21 @@ export default function VoiceNotes() {
   }
 
   return (
-    <div className="min-h-screen bg-muted/30">
-      <div className="flex flex-col min-h-screen">
-        <Header />
-        
-        {/* Notes list button nell'header */}
-        <div className="absolute top-4 right-4">
-          <NotesList 
-            notes={notes}
-            onNoteSelect={handleLoadNote}
-            onNoteDelete={handleDeleteNote}
-          />
-        </div>
+    <div className="h-screen flex flex-col bg-muted/30">
+      <Header />
+      
+      {/* Notes list button - posizionamento assoluto rispetto al container */}
+      <div className="fixed top-4 right-4 z-50">
+        <NotesList 
+          notes={notes}
+          onNoteSelect={handleLoadNote}
+          onNoteDelete={handleDeleteNote}
+        />
+      </div>
 
-        <main className="max-w-6xl mx-auto px-4 py-8 space-y-8 flex-1">
+      {/* Main content con overflow-y-auto per permettere lo scroll */}
+      <main className="flex-1 overflow-y-auto">
+        <div className="max-w-6xl mx-auto px-4 py-8 space-y-8">
           {/* Upload Section */}
           {!transcriptionResult && !processingState.isProcessing && (
             <FileUpload 
@@ -160,8 +161,8 @@ export default function VoiceNotes() {
               onNewNote={handleNewNote}
             />
           )}
-        </main>
-      </div>
+        </div>
+      </main>
     </div>
   )
 }
