@@ -1,10 +1,11 @@
 "use client"
 
-import { useRef, useCallback, useState } from 'react'
-import { Upload } from 'lucide-react'
+import { useRef, useCallback, useState, useEffect } from 'react'
+import { Upload, Mic } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
+import { MobileAudioRecorder } from '@/components/mobile-audio-recorder'
 import { cn } from '@/lib/utils'
 
 // Configurazione file audio supportati
@@ -16,7 +17,8 @@ export const FILE_CONFIG = {
     'audio/mp4',
     'audio/flac',
     'audio/ogg',
-    'audio/aac'
+    'audio/aac',
+    'audio/webm'
   ],
   supportedExtensions: [
     '.mp3',
@@ -24,7 +26,8 @@ export const FILE_CONFIG = {
     '.m4a',
     '.flac',
     '.ogg',
-    '.aac'
+    '.aac',
+    '.webm'
   ]
 }
 
@@ -37,7 +40,23 @@ export function FileUpload({ onFileProcess, isProcessing }: FileUploadProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [promptType, setPromptType] = useState<'linkedin' | 'general'>('linkedin')
   const [isDragging, setIsDragging] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
+  const [showRecorder, setShowRecorder] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    // Rileva se siamo su mobile
+    const checkMobile = () => {
+      const userAgent = navigator.userAgent.toLowerCase()
+      const isMobileUA = /mobile|android|iphone|ipad|phone/i.test(userAgent)
+      const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0
+      setIsMobile(isMobileUA || isTouchDevice)
+    }
+
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
 
   const handleFileSelect = (file: File) => {
     // Validazione formato
@@ -45,7 +64,7 @@ export function FileUpload({ onFileProcess, isProcessing }: FileUploadProps) {
       FILE_CONFIG.supportedExtensions.some(ext => file.name.toLowerCase().endsWith(ext))
 
     if (!isValidType) {
-      alert('Formato file non supportato. Usa MP3, WAV, M4A, FLAC, OGG o AAC.')
+      alert('Formato file non supportato. Usa MP3, WAV, M4A, FLAC, OGG, AAC o WEBM.')
       return
     }
 
@@ -56,6 +75,7 @@ export function FileUpload({ onFileProcess, isProcessing }: FileUploadProps) {
     }
 
     setSelectedFile(file)
+    setShowRecorder(false)
   }
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
@@ -85,6 +105,7 @@ export function FileUpload({ onFileProcess, isProcessing }: FileUploadProps) {
     
     // Reset dopo elaborazione
     setSelectedFile(null)
+    setShowRecorder(false)
     if (fileInputRef.current) {
       fileInputRef.current.value = ''
     }
@@ -99,7 +120,7 @@ export function FileUpload({ onFileProcess, isProcessing }: FileUploadProps) {
       <CardHeader>
         <CardTitle>Carica nota vocale</CardTitle>
         <CardDescription>
-          Trascina o seleziona un file audio per iniziare
+          {isMobile ? 'Registra o carica un file audio' : 'Trascina o seleziona un file audio per iniziare'}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -124,36 +145,76 @@ export function FileUpload({ onFileProcess, isProcessing }: FileUploadProps) {
           </RadioGroup>
         </div>
 
-        {/* Dropzone */}
-        <div
-          className={cn(
-            "border-2 border-dashed rounded-xl p-12 text-center cursor-pointer transition-all",
-            isDragging
-              ? "border-primary bg-primary/5 scale-[1.02]"
-              : "border-muted-foreground/25 hover:border-primary/50",
-            isProcessing && "opacity-50 cursor-not-allowed"
-          )}
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          onDrop={handleDrop}
-          onClick={() => !isProcessing && fileInputRef.current?.click()}
-        >
-          <Upload className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
-          <p className="text-foreground mb-2">
-            Trascina qui il file audio o clicca per selezionare
-          </p>
-          <p className="text-sm text-muted-foreground">
-            Formati supportati: MP3, WAV, M4A, FLAC, OGG, AAC (max 25MB)
-          </p>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="audio/*"
-            className="hidden"
-            onChange={(e) => e.target.files?.[0] && handleFileSelect(e.target.files[0])}
-            disabled={isProcessing}
+        {/* Opzioni mobile */}
+        {isMobile && !selectedFile && (
+          <div className="flex gap-2">
+            <Button
+              variant={showRecorder ? 'default' : 'outline'}
+              onClick={() => setShowRecorder(true)}
+              className="flex-1"
+              disabled={isProcessing}
+            >
+              <Mic className="h-4 w-4 mr-2" />
+              Registra
+            </Button>
+            <Button
+              variant={!showRecorder ? 'default' : 'outline'}
+              onClick={() => {
+                setShowRecorder(false)
+                fileInputRef.current?.click()
+              }}
+              className="flex-1"
+              disabled={isProcessing}
+            >
+              <Upload className="h-4 w-4 mr-2" />
+              Carica file
+            </Button>
+          </div>
+        )}
+
+        {/* Registratore mobile */}
+        {isMobile && showRecorder && !selectedFile && (
+          <MobileAudioRecorder
+            onFileReady={handleFileSelect}
+            isProcessing={isProcessing}
           />
-        </div>
+        )}
+
+        {/* Dropzone desktop o area file mobile */}
+        {(!isMobile || (!showRecorder && !selectedFile)) && (
+          <div
+            className={cn(
+              "border-2 border-dashed rounded-xl p-12 text-center transition-all",
+              isDragging
+                ? "border-primary bg-primary/5 scale-[1.02]"
+                : "border-muted-foreground/25 hover:border-primary/50",
+              isProcessing && "opacity-50 cursor-not-allowed",
+              !isMobile && "cursor-pointer",
+              isMobile && "hidden"
+            )}
+            onDragOver={!isMobile ? handleDragOver : undefined}
+            onDragLeave={!isMobile ? handleDragLeave : undefined}
+            onDrop={!isMobile ? handleDrop : undefined}
+            onClick={() => !isProcessing && !isMobile && fileInputRef.current?.click()}
+          >
+            <Upload className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
+            <p className="text-foreground mb-2">
+              Trascina qui il file audio o clicca per selezionare
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Formati supportati: MP3, WAV, M4A, FLAC, OGG, AAC (max 25MB)
+            </p>
+          </div>
+        )}
+
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".mp3,.wav,.m4a,.flac,.ogg,.aac,.webm,audio/*"
+          className="hidden"
+          onChange={(e) => e.target.files?.[0] && handleFileSelect(e.target.files[0])}
+          disabled={isProcessing}
+        />
 
         {/* File info */}
         {selectedFile && (
@@ -161,6 +222,16 @@ export function FileUpload({ onFileProcess, isProcessing }: FileUploadProps) {
             <p className="text-primary font-medium">
               File selezionato: {selectedFile.name} ({formatFileSize(selectedFile.size)})
             </p>
+            {isMobile && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setSelectedFile(null)}
+                className="mt-2"
+              >
+                Cambia file
+              </Button>
+            )}
           </div>
         )}
 
