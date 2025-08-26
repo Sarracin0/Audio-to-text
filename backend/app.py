@@ -4,7 +4,7 @@ import tempfile
 import firebase_admin
 from datetime import datetime
 from typing import Optional, Dict, Any
-from fastapi import FastAPI, UploadFile, File, HTTPException, Request
+from fastapi import FastAPI, UploadFile, File, HTTPException, Request, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from openai import OpenAI
@@ -15,9 +15,13 @@ import cloudinary.uploader
 from dotenv import load_dotenv
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
-from prompts import WHISPER_PROMPT, get_prompt  # Importa i prompt
+from prompts import WHISPER_PROMPT, get_prompt
 from urllib.parse import urlparse
 import re
+from pydantic import BaseModel
+
+# Import auth module
+from auth import get_current_user, verify_password, create_access_token
 
 # Carica variabili d'ambiente
 load_dotenv()
@@ -56,6 +60,10 @@ claude_client = anthropic.Anthropic(api_key=os.getenv('ANTHROPIC_API_KEY'))
 
 # Thread pool per operazioni CPU intensive
 executor = ThreadPoolExecutor(max_workers=2)
+
+# Pydantic model per login
+class LoginRequest(BaseModel):
+    password: str
 
 def serialize_firestore_data(data: dict) -> dict:
     """Converte i tipi Firestore in tipi JSON serializzabili"""
@@ -115,12 +123,44 @@ def extract_cloudinary_public_id(cloudinary_url: str) -> Optional[str]:
 
 @app.get("/")
 async def root():
+    """Endpoint pubblico per verificare che l'API sia online"""
     return {"message": "Whisper Claude Notes API", "status": "online"}
+
+@app.post("/api/login")
+async def login(login_data: LoginRequest):
+    """Endpoint per il login - non richiede autenticazione"""
+    if not verify_password(login_data.password):
+        raise HTTPException(
+            status_code=401,
+            detail="Password non corretta"
+        )
+    
+    # Crea token JWT
+    access_token = create_access_token({
+        "authenticated": True,
+        "login_time": datetime.utcnow().isoformat()
+    })
+    
+    return JSONResponse({
+        "success": True,
+        "access_token": access_token,
+        "token_type": "bearer"
+    })
+
+@app.get("/api/verify")
+async def verify_auth(current_user: dict = Depends(get_current_user)):
+    """Verifica se il token è valido"""
+    return JSONResponse({
+        "success": True,
+        "authenticated": True,
+        "login_time": current_user.get("login_time")
+    })
 
 @app.post("/api/transcribe")
 async def transcribe_audio(
     file: UploadFile = File(...), 
-    prompt_type: str = "linkedin"  # Parametro per scegliere il tipo di prompt
+    prompt_type: str = "linkedin",
+    current_user: dict = Depends(get_current_user)  # Richiede autenticazione
 ):
     """Endpoint per trascrivere audio con Whisper e processare con Claude"""
     
@@ -211,7 +251,10 @@ async def transcribe_audio(
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/notes")
-async def get_notes(limit: int = 20):
+async def get_notes(
+    limit: int = 20,
+    current_user: dict = Depends(get_current_user)  # Richiede autenticazione
+):
     """Recupera le note salvate"""
     try:
         # Ordina per created_at invece di timestamp per evitare problemi
@@ -252,7 +295,10 @@ async def get_notes(limit: int = 20):
             raise HTTPException(status_code=500, detail=str(fallback_error))
 
 @app.get("/api/note/{note_id}")
-async def get_note(note_id: str):
+async def get_note(
+    note_id: str,
+    current_user: dict = Depends(get_current_user)  # Richiede autenticazione
+):
     """Recupera una nota specifica"""
     try:
         doc_ref = db.collection('notes').document(note_id)
@@ -273,7 +319,11 @@ async def get_note(note_id: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.put("/api/note/{note_id}")
-async def update_note(note_id: str, request: Request):
+async def update_note(
+    note_id: str, 
+    request: Request,
+    current_user: dict = Depends(get_current_user)  # Richiede autenticazione
+):
     """Aggiorna il testo processato di una nota"""
     try:
         # Parse del body JSON
@@ -307,7 +357,10 @@ async def update_note(note_id: str, request: Request):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.delete("/api/note/{note_id}")
-async def delete_note(note_id: str):
+async def delete_note(
+    note_id: str,
+    current_user: dict = Depends(get_current_user)  # Richiede autenticazione
+):
     """Elimina una nota dal database e il file audio da Cloudinary"""
     try:
         doc_ref = db.collection('notes').document(note_id)

@@ -3,11 +3,16 @@ uvicorn[standard]
 python-multipart
 python-dotenv
 aiofiles
+pydantic
 
 # AI/ML
 anthropic
 openai
 tiktoken
+
 # Cloud services
 firebase-admin
 cloudinary
+
+# Authentication
+pyjwt[crypto]

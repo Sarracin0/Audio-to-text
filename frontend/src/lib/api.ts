@@ -1,4 +1,6 @@
 // Configurazione semplice - cambia questo URL con quello del tuo backend
+import { authService } from './auth'
+
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000'
 
 export interface CostData {
@@ -24,7 +26,7 @@ export interface TranscriptionResponse {
   transcription: string
   processed: string
   audio_url: string
-  cost?: CostData  // Dati dei costi opzionali
+  cost?: CostData
 }
 
 export interface Note {
@@ -37,7 +39,7 @@ export interface Note {
   created_at: string
   timestamp?: string
   updated_at?: string
-  cost_data?: CostData  // Dati dei costi opzionali
+  cost_data?: CostData
   audio_duration_minutes?: number
 }
 
@@ -51,70 +53,149 @@ export interface NoteResponse {
   note: Note
 }
 
+export interface LoginResponse {
+  success: boolean
+  access_token: string
+  token_type: string
+}
+
 class ApiService {
-  // Chiamate dirette al backend Python - semplice e funzionale
   
+  /**
+   * Gestisce errori di autenticazione
+   */
+  private async handleResponse(response: Response) {
+    if (response.status === 401) {
+      // Token scaduto o non valido
+      authService.logout()
+      throw new Error('Sessione scaduta. Effettua nuovamente il login.')
+    }
+    
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ detail: 'Errore sconosciuto' }))
+      throw new Error(error.detail || 'Errore nella richiesta')
+    }
+    
+    return response
+  }
+
+  /**
+   * Login con password
+   */
+  async login(password: string): Promise<LoginResponse> {
+    const response = await fetch(`${BACKEND_URL}/api/login`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ password }),
+    })
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ detail: 'Password non corretta' }))
+      throw new Error(error.detail || 'Errore nel login')
+    }
+
+    const data = await response.json()
+    
+    // Salva il token
+    if (data.access_token) {
+      authService.setToken(data.access_token)
+    }
+    
+    return data
+  }
+
+  /**
+   * Verifica autenticazione
+   */
+  async verifyAuth(): Promise<boolean> {
+    if (!authService.isAuthenticated()) {
+      return false
+    }
+
+    try {
+      const response = await fetch(`${BACKEND_URL}/api/verify`, {
+        headers: authService.getAuthHeaders(),
+      })
+      
+      if (!response.ok) {
+        authService.removeToken()
+        return false
+      }
+      
+      return true
+    } catch {
+      authService.removeToken()
+      return false
+    }
+  }
+  
+  /**
+   * Trascrivi audio con autenticazione
+   */
   async transcribeAudio(file: File, promptType: 'linkedin' | 'general' = 'linkedin'): Promise<TranscriptionResponse> {
     const formData = new FormData()
     formData.append('file', file)
 
     const response = await fetch(`${BACKEND_URL}/api/transcribe?prompt_type=${promptType}`, {
       method: 'POST',
+      headers: authService.getAuthHeadersMultipart(),
       body: formData,
     })
 
-    if (!response.ok) {
-      throw new Error('Errore durante la trascrizione')
-    }
-
+    await this.handleResponse(response)
     return response.json()
   }
 
+  /**
+   * Recupera note con autenticazione
+   */
   async getNotes(limit: number = 20): Promise<NotesResponse> {
-    const response = await fetch(`${BACKEND_URL}/api/notes?limit=${limit}`)
+    const response = await fetch(`${BACKEND_URL}/api/notes?limit=${limit}`, {
+      headers: authService.getAuthHeaders(),
+    })
     
-    if (!response.ok) {
-      throw new Error('Errore nel caricamento delle note')
-    }
-
+    await this.handleResponse(response)
     return response.json()
   }
 
+  /**
+   * Recupera una nota specifica con autenticazione
+   */
   async getNote(noteId: string): Promise<NoteResponse> {
-    const response = await fetch(`${BACKEND_URL}/api/note/${noteId}`)
+    const response = await fetch(`${BACKEND_URL}/api/note/${noteId}`, {
+      headers: authService.getAuthHeaders(),
+    })
     
-    if (!response.ok) {
-      throw new Error('Nota non trovata')
-    }
-
+    await this.handleResponse(response)
     return response.json()
   }
 
+  /**
+   * Aggiorna nota con autenticazione
+   */
   async updateNote(noteId: string, processedText: string): Promise<{ success: boolean; message: string }> {
     const response = await fetch(`${BACKEND_URL}/api/note/${noteId}`, {
       method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: authService.getAuthHeaders(),
       body: JSON.stringify({ processed_text: processedText }),
     })
 
-    if (!response.ok) {
-      throw new Error('Errore durante il salvataggio')
-    }
-
+    await this.handleResponse(response)
     return response.json()
   }
 
+  /**
+   * Elimina nota con autenticazione
+   */
   async deleteNote(noteId: string): Promise<{ success: boolean; message: string }> {
     const response = await fetch(`${BACKEND_URL}/api/note/${noteId}`, {
       method: 'DELETE',
+      headers: authService.getAuthHeaders(),
     })
 
-    if (!response.ok) {
-      throw new Error('Errore durante l\'eliminazione')
-    }
-
+    await this.handleResponse(response)
     return response.json()
   }
 }
