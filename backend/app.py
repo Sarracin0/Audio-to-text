@@ -7,7 +7,7 @@ from typing import Optional
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-import whisper
+from openai import OpenAI
 import anthropic
 from firebase_admin import credentials, firestore
 import cloudinary
@@ -45,23 +45,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Inizializza client OpenAI per Whisper API
+openai_client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+
 # Inizializza client Anthropic
 claude_client = anthropic.Anthropic(api_key=os.getenv('ANTHROPIC_API_KEY'))
 
 # Thread pool per operazioni CPU intensive
 executor = ThreadPoolExecutor(max_workers=2)
-
-# Cache per il modello Whisper
-whisper_model = None
-
-def get_whisper_model():
-    """Carica il modello Whisper con lazy loading"""
-    global whisper_model
-    if whisper_model is None:
-        print("Caricamento modello Whisper large...")
-        whisper_model = whisper.load_model("large")
-        print("Modello Whisper caricato")
-    return whisper_model
 
 # Prompt hardcoded per Claude
 CLAUDE_PROMPT = """Sei un assistente intelligente che analizza trascrizioni di note vocali.
@@ -76,6 +67,10 @@ Trascrizione da analizzare:
 {transcription}
 
 Per favore, elabora questa nota vocale e restituisci una versione migliorata e strutturata."""
+
+# Prompt per migliorare la trascrizione Whisper
+WHISPER_PROMPT = """Questa è una nota vocale personale in italiano. 
+Trascrivi accuratamente includendo la punteggiatura appropriata."""
 
 @app.get("/")
 async def root():
@@ -110,11 +105,21 @@ async def transcribe_audio(file: UploadFile = File(...)):
         
         audio_url = upload_result['secure_url']
         
-        # Trascrivi con Whisper in thread separato
-        loop = asyncio.get_event_loop()
-        model = get_whisper_model()
-        result = await loop.run_in_executor(executor, model.transcribe, tmp_path)
-        transcription = result["text"]
+        # Trascrivi con OpenAI Whisper API
+        print("Invio audio a Whisper API...")
+        
+        # Apri il file audio per l'API
+        with open(tmp_path, "rb") as audio_file:
+            transcription_response = openai_client.audio.transcriptions.create(
+                model="whisper-1",  # Puoi anche usare "gpt-4o-transcribe" per qualità superiore
+                file=audio_file,
+                prompt=WHISPER_PROMPT,
+                language="it",  # Specifica italiano per migliori risultati
+                response_format="text"
+            )
+        
+        transcription = transcription_response
+        print(f"Trascrizione completata: {len(transcription)} caratteri")
         
         # Processa con Claude
         claude_response = claude_client.messages.create(
