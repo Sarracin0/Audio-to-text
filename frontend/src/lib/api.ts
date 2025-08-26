@@ -23,6 +23,7 @@ export interface CostData {
 export interface TranscriptionResponse {
   success: boolean
   id: string
+  title?: string
   transcription: string
   processed: string
   audio_url: string
@@ -31,6 +32,7 @@ export interface TranscriptionResponse {
 
 export interface Note {
   id: string
+  title: string  // Nuovo campo per il titolo personalizzabile
   original_filename: string
   audio_url: string
   transcription: string
@@ -57,6 +59,11 @@ export interface LoginResponse {
   success: boolean
   access_token: string
   token_type: string
+}
+
+export interface UpdateNoteData {
+  processed_text?: string
+  title?: string
 }
 
 class ApiService {
@@ -173,13 +180,13 @@ class ApiService {
   }
 
   /**
-   * Aggiorna nota con autenticazione
+   * Aggiorna nota con autenticazione (testo e/o titolo)
    */
-  async updateNote(noteId: string, processedText: string): Promise<{ success: boolean; message: string }> {
+  async updateNote(noteId: string, data: UpdateNoteData): Promise<{ success: boolean; message: string }> {
     const response = await fetch(`${BACKEND_URL}/api/note/${noteId}`, {
       method: 'PUT',
       headers: authService.getAuthHeaders(),
-      body: JSON.stringify({ processed_text: processedText }),
+      body: JSON.stringify(data),
     })
 
     await this.handleResponse(response)

@@ -1,7 +1,8 @@
 "use client"
 
+import { useState } from 'react'
 import dynamic from 'next/dynamic'
-import { Copy, Save } from 'lucide-react'
+import { Copy, Save, Edit2, Check, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { CostDisplay } from '@/components/cost-display'
@@ -19,7 +20,9 @@ const MDEditor = dynamic(
 interface NoteEditorProps {
   transcription: TranscriptionResponse
   processedText: string
+  noteTitle: string
   onTextChange: (text: string) => void
+  onTitleChange: (title: string) => Promise<void>
   onSave: () => Promise<void>
   onNewNote: () => void
 }
@@ -27,10 +30,15 @@ interface NoteEditorProps {
 export function NoteEditor({ 
   transcription, 
   processedText, 
+  noteTitle,
   onTextChange, 
+  onTitleChange,
   onSave, 
   onNewNote 
 }: NoteEditorProps) {
+  const [isEditingTitle, setIsEditingTitle] = useState(false)
+  const [editedTitle, setEditedTitle] = useState(noteTitle)
+  const [isSavingTitle, setIsSavingTitle] = useState(false)
   
   const copyToClipboard = async () => {
     try {
@@ -73,8 +81,99 @@ export function NoteEditor({
     }
   }
 
+  const handleEditTitle = () => {
+    setIsEditingTitle(true)
+    setEditedTitle(noteTitle)
+  }
+
+  const handleSaveTitle = async () => {
+    if (!editedTitle.trim()) {
+      setEditedTitle(noteTitle)
+      setIsEditingTitle(false)
+      return
+    }
+
+    if (editedTitle === noteTitle) {
+      setIsEditingTitle(false)
+      return
+    }
+
+    setIsSavingTitle(true)
+    try {
+      await onTitleChange(editedTitle)
+      setIsEditingTitle(false)
+    } catch (error) {
+      console.error('Errore durante aggiornamento titolo:', error)
+      alert('Errore durante l\'aggiornamento del titolo')
+      setEditedTitle(noteTitle)
+    } finally {
+      setIsSavingTitle(false)
+    }
+  }
+
+  const handleCancelEdit = () => {
+    setEditedTitle(noteTitle)
+    setIsEditingTitle(false)
+  }
+
+  const handleTitleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      handleSaveTitle()
+    } else if (e.key === 'Escape') {
+      handleCancelEdit()
+    }
+  }
+
   return (
     <>
+      {/* Titolo della nota modificabile */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            {isEditingTitle ? (
+              <div className="flex items-center gap-2 flex-1">
+                <input
+                  type="text"
+                  value={editedTitle}
+                  onChange={(e) => setEditedTitle(e.target.value)}
+                  onKeyDown={handleTitleKeyDown}
+                  className="flex-1 px-3 py-2 text-lg font-semibold border rounded-md focus:outline-none focus:ring-2 focus:ring-primary bg-background"
+                  autoFocus
+                  disabled={isSavingTitle}
+                />
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleSaveTitle}
+                  disabled={isSavingTitle}
+                >
+                  <Check className="h-4 w-4 text-green-600" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleCancelEdit}
+                  disabled={isSavingTitle}
+                >
+                  <X className="h-4 w-4 text-destructive" />
+                </Button>
+              </div>
+            ) : (
+              <>
+                <h2 className="text-lg font-semibold flex-1">{noteTitle}</h2>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleEditTitle}
+                >
+                  <Edit2 className="h-4 w-4" />
+                </Button>
+              </>
+            )}
+          </div>
+        </CardHeader>
+      </Card>
+
       {/* Mostra i costi se disponibili */}
       {transcription.cost && (
         <CostDisplay cost={transcription.cost} />

@@ -17,9 +17,10 @@ interface NotesListProps {
   notes: Note[]
   onNoteSelect: (noteId: string) => void
   onNoteDelete: (noteId: string) => Promise<void>
+  onNotesUpdate?: () => void  // Callback per ricaricare le note dopo modifica titolo
 }
 
-export function NotesList({ notes, onNoteSelect, onNoteDelete }: NotesListProps) {
+export function NotesList({ notes, onNoteSelect, onNoteDelete, onNotesUpdate }: NotesListProps) {
   return (
     <Dialog>
       <DialogTrigger asChild>
@@ -31,7 +32,7 @@ export function NotesList({ notes, onNoteSelect, onNoteDelete }: NotesListProps)
         <DialogHeader>
           <DialogTitle>Le mie note</DialogTitle>
           <DialogDescription>
-            Seleziona una nota per visualizzarla e modificarla
+            Seleziona una nota per visualizzarla e modificarla. Clicca sull'icona matita per rinominare.
           </DialogDescription>
         </DialogHeader>
         <div className="overflow-y-auto max-h-[60vh] space-y-3 mt-4">
@@ -46,6 +47,7 @@ export function NotesList({ notes, onNoteSelect, onNoteDelete }: NotesListProps)
                 note={note}
                 onClick={() => onNoteSelect(note.id)}
                 onDelete={onNoteDelete}
+                onUpdate={onNotesUpdate}
               />
             ))
           )}

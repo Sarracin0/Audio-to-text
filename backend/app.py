@@ -61,9 +61,13 @@ claude_client = anthropic.Anthropic(api_key=os.getenv('ANTHROPIC_API_KEY'))
 # Thread pool per operazioni CPU intensive
 executor = ThreadPoolExecutor(max_workers=2)
 
-# Pydantic model per login
+# Pydantic models
 class LoginRequest(BaseModel):
     password: str
+
+class UpdateNoteRequest(BaseModel):
+    processed_text: Optional[str] = None
+    title: Optional[str] = None
 
 def serialize_firestore_data(data: dict) -> dict:
     """Converte i tipi Firestore in tipi JSON serializzabili"""
@@ -221,8 +225,13 @@ async def transcribe_audio(
         
         processed_text = claude_response.content[0].text
         
+        # Genera un titolo iniziale basato sul nome del file
+        # Rimuovi estensione e timestamp per un titolo più leggibile
+        initial_title = file.filename.rsplit('.', 1)[0]  # Rimuovi estensione
+        
         # Salva nel database Firestore
         doc_data = {
+            "title": initial_title,  # Nuovo campo titolo
             "original_filename": file.filename,
             "audio_url": audio_url,
             "transcription": transcription,
@@ -241,6 +250,7 @@ async def transcribe_audio(
         return JSONResponse({
             "success": True,
             "id": doc_id,
+            "title": initial_title,
             "transcription": transcription,
             "processed": processed_text,
             "audio_url": audio_url
@@ -267,6 +277,11 @@ async def get_notes(
             # Serializza i dati Firestore
             note_data = serialize_firestore_data(note_data)
             note_data['id'] = doc.id
+            
+            # Assicurati che il campo title esista (per retrocompatibilità)
+            if 'title' not in note_data:
+                note_data['title'] = note_data.get('original_filename', 'Nota senza titolo')
+            
             notes.append(note_data)
         
         return JSONResponse({"success": True, "notes": notes})
@@ -284,6 +299,11 @@ async def get_notes(
                 # Serializza i dati Firestore
                 note_data = serialize_firestore_data(note_data)
                 note_data['id'] = doc.id
+                
+                # Assicurati che il campo title esista (per retrocompatibilità)
+                if 'title' not in note_data:
+                    note_data['title'] = note_data.get('original_filename', 'Nota senza titolo')
+                
                 notes.append(note_data)
             
             # Ordina manualmente per created_at se esiste
@@ -312,6 +332,10 @@ async def get_note(
         note_data = serialize_firestore_data(note_data)
         note_data['id'] = doc.id
         
+        # Assicurati che il campo title esista (per retrocompatibilità)
+        if 'title' not in note_data:
+            note_data['title'] = note_data.get('original_filename', 'Nota senza titolo')
+        
         return JSONResponse({"success": True, "note": note_data})
         
     except Exception as e:
@@ -321,19 +345,11 @@ async def get_note(
 @app.put("/api/note/{note_id}")
 async def update_note(
     note_id: str, 
-    request: Request,
+    request: UpdateNoteRequest,
     current_user: dict = Depends(get_current_user)  # Richiede autenticazione
 ):
-    """Aggiorna il testo processato di una nota"""
+    """Aggiorna il testo processato e/o il titolo di una nota"""
     try:
-        # Parse del body JSON
-        data = await request.json()
-        print(f"Aggiornamento nota {note_id} con dati: {data}")
-        
-        # Verifica che processed_text sia presente
-        if 'processed_text' not in data:
-            raise HTTPException(status_code=400, detail="processed_text mancante nel body")
-        
         # Verifica che il documento esista
         doc_ref = db.collection('notes').document(note_id)
         doc = doc_ref.get()
@@ -341,11 +357,20 @@ async def update_note(
         if not doc.exists:
             raise HTTPException(status_code=404, detail="Nota non trovata")
         
-        # Aggiorna il documento
-        doc_ref.update({
-            'processed_text': data['processed_text'],
+        # Prepara i dati da aggiornare
+        update_data = {
             'updated_at': datetime.now().isoformat()
-        })
+        }
+        
+        # Aggiungi i campi da aggiornare se presenti
+        if request.processed_text is not None:
+            update_data['processed_text'] = request.processed_text
+            
+        if request.title is not None:
+            update_data['title'] = request.title
+        
+        # Aggiorna il documento
+        doc_ref.update(update_data)
         
         print(f"Nota {note_id} aggiornata con successo")
         return JSONResponse({"success": True, "message": "Nota aggiornata"})

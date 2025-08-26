@@ -21,6 +21,7 @@ export default function VoiceNotes() {
   const [transcriptionResult, setTranscriptionResult] = useState<TranscriptionResponse | null>(null)
   const [processedText, setProcessedText] = useState('')
   const [currentNoteId, setCurrentNoteId] = useState<string | null>(null)
+  const [currentNoteTitle, setCurrentNoteTitle] = useState<string>('')
   const [notes, setNotes] = useState<Note[]>([])
 
   // Carica note all'avvio
@@ -52,6 +53,7 @@ export default function VoiceNotes() {
       const markdownText = result.processed.replace(/<br>/g, '\n').replace(/<[^>]*>/g, '')
       setProcessedText(markdownText)
       setCurrentNoteId(result.id)
+      setCurrentNoteTitle(result.title || file.name)
 
       // Ricarica lista note
       await loadNotes()
@@ -67,7 +69,7 @@ export default function VoiceNotes() {
     if (!currentNoteId) return
 
     try {
-      await apiService.updateNote(currentNoteId, processedText)
+      await apiService.updateNote(currentNoteId, { processed_text: processedText })
       // Ricarica lista note dopo salvataggio
       await loadNotes()
     } catch (error) {
@@ -82,6 +84,7 @@ export default function VoiceNotes() {
       setTranscriptionResult({
         success: true,
         id: noteId,
+        title: response.note.title,
         transcription: response.note.transcription,
         processed: response.note.processed_text,
         audio_url: response.note.audio_url,
@@ -91,6 +94,7 @@ export default function VoiceNotes() {
       const markdownText = response.note.processed_text.replace(/<br>/g, '\n').replace(/<[^>]*>/g, '')
       setProcessedText(markdownText)
       setCurrentNoteId(noteId)
+      setCurrentNoteTitle(response.note.title)
     } catch (error) {
       console.error('Errore nel caricamento nota:', error)
       alert('Errore nel caricamento della nota')
@@ -106,6 +110,7 @@ export default function VoiceNotes() {
         setTranscriptionResult(null)
         setProcessedText('')
         setCurrentNoteId(null)
+        setCurrentNoteTitle('')
       }
       
       // Ricarica lista note
@@ -120,6 +125,21 @@ export default function VoiceNotes() {
     setTranscriptionResult(null)
     setProcessedText('')
     setCurrentNoteId(null)
+    setCurrentNoteTitle('')
+  }
+
+  const handleUpdateTitle = async (newTitle: string) => {
+    if (!currentNoteId || !newTitle.trim()) return
+
+    try {
+      await apiService.updateNote(currentNoteId, { title: newTitle })
+      setCurrentNoteTitle(newTitle)
+      // Ricarica lista note per mostrare il nuovo titolo
+      await loadNotes()
+    } catch (error) {
+      console.error('Errore nell\'aggiornamento del titolo:', error)
+      throw error
+    }
   }
 
   return (
@@ -132,6 +152,7 @@ export default function VoiceNotes() {
           notes={notes}
           onNoteSelect={handleLoadNote}
           onNoteDelete={handleDeleteNote}
+          onNotesUpdate={loadNotes}
         />
       </div>
 
@@ -156,7 +177,9 @@ export default function VoiceNotes() {
             <NoteEditor
               transcription={transcriptionResult}
               processedText={processedText}
+              noteTitle={currentNoteTitle}
               onTextChange={setProcessedText}
+              onTitleChange={handleUpdateTitle}
               onSave={handleSaveNote}
               onNewNote={handleNewNote}
             />
