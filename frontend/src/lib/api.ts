@@ -14,7 +14,7 @@ export interface Note {
   processed_text: string
   prompt_type: string
   created_at: string
-  timestamp?: any
+  timestamp?: string  // Changed from 'any' to 'string'
   updated_at?: string
 }
 
