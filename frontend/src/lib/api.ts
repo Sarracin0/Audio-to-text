@@ -14,7 +14,7 @@ export interface Note {
   processed_text: string
   prompt_type: string
   created_at: string
-  timestamp?: string  // Changed from 'any' to 'string'
+  timestamp?: string
   updated_at?: string
 }
 
@@ -42,7 +42,8 @@ class ApiService {
     })
 
     if (!response.ok) {
-      throw new Error('Errore durante la trascrizione')
+      const errorData = await response.json().catch(() => null)
+      throw new Error(errorData?.error || 'Errore durante la trascrizione')
     }
 
     return response.json()
@@ -52,24 +53,26 @@ class ApiService {
     const response = await fetch(`/api/notes?limit=${limit}`)
     
     if (!response.ok) {
-      throw new Error('Errore nel caricamento delle note')
+      const errorData = await response.json().catch(() => null)
+      throw new Error(errorData?.error || 'Errore nel caricamento delle note')
     }
 
     return response.json()
   }
 
   async getNote(noteId: string): Promise<NoteResponse> {
-    const response = await fetch(`/api/note/${noteId}`)
+    const response = await fetch(`/api/notes/${noteId}`)
     
     if (!response.ok) {
-      throw new Error('Nota non trovata')
+      const errorData = await response.json().catch(() => null)
+      throw new Error(errorData?.error || 'Nota non trovata')
     }
 
     return response.json()
   }
 
   async updateNote(noteId: string, processedText: string): Promise<{ success: boolean; message: string }> {
-    const response = await fetch(`/api/note/${noteId}`, {
+    const response = await fetch(`/api/notes/${noteId}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -78,7 +81,9 @@ class ApiService {
     })
 
     if (!response.ok) {
-      throw new Error('Errore durante il salvataggio')
+      const errorData = await response.json().catch(() => null)
+      console.error('Update note error response:', errorData)
+      throw new Error(errorData?.error || 'Errore durante il salvataggio')
     }
 
     return response.json()

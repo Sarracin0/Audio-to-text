@@ -3,8 +3,8 @@ import json
 import tempfile
 import firebase_admin
 from datetime import datetime
-from typing import Optional
-from fastapi import FastAPI, UploadFile, File, HTTPException
+from typing import Optional, Dict, Any
+from fastapi import FastAPI, UploadFile, File, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from openai import OpenAI
@@ -97,7 +97,7 @@ async def transcribe_audio(
         # Apri il file audio per l'API
         with open(tmp_path, "rb") as audio_file:
             transcription_response = openai_client.audio.transcriptions.create(
-                model="whisper-1",  # Puoi anche usare "gpt-4o-transcribe" per qualità superiore
+                model="whisper-1",
                 file=audio_file,
                 prompt=WHISPER_PROMPT,
                 language="it",  # Specifica italiano per migliori risultati
@@ -168,6 +168,7 @@ async def get_notes(limit: int = 20):
         return JSONResponse({"success": True, "notes": notes})
         
     except Exception as e:
+        print(f"Errore nel recupero note: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/note/{note_id}")
@@ -186,21 +187,41 @@ async def get_note(note_id: str):
         return JSONResponse({"success": True, "note": note_data})
         
     except Exception as e:
+        print(f"Errore nel recupero nota {note_id}: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.put("/api/note/{note_id}")
-async def update_note(note_id: str, data: dict):
+async def update_note(note_id: str, request: Request):
     """Aggiorna il testo processato di una nota"""
     try:
+        # Parse del body JSON
+        data = await request.json()
+        print(f"Aggiornamento nota {note_id} con dati: {data}")
+        
+        # Verifica che processed_text sia presente
+        if 'processed_text' not in data:
+            raise HTTPException(status_code=400, detail="processed_text mancante nel body")
+        
+        # Verifica che il documento esista
         doc_ref = db.collection('notes').document(note_id)
+        doc = doc_ref.get()
+        
+        if not doc.exists:
+            raise HTTPException(status_code=404, detail="Nota non trovata")
+        
+        # Aggiorna il documento
         doc_ref.update({
-            'processed_text': data.get('processed_text'),
+            'processed_text': data['processed_text'],
             'updated_at': datetime.now().isoformat()
         })
         
+        print(f"Nota {note_id} aggiornata con successo")
         return JSONResponse({"success": True, "message": "Nota aggiornata"})
         
+    except HTTPException:
+        raise
     except Exception as e:
+        print(f"Errore nell'aggiornamento nota {note_id}: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
