@@ -1,193 +1,183 @@
-# 🎙️ Whisper Transcriber
+# 🎙️ Voice to LinkedIn Post - AI Transcription System
 
-> Convert speech to text with ease using OpenAI's Whisper model in a user-friendly Gradio interface.
+Sistema di trascrizione e elaborazione intelligente di note vocali per creare post LinkedIn professionali usando Whisper e Claude.
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Python 3.7+](https://img.shields.io/badge/python-3.7+-blue.svg)](https://www.python.org/downloads/)
-[![OpenAI Whisper](https://img.shields.io/badge/AI-Whisper-brightgreen.svg)](https://github.com/openai/whisper)
-[![Gradio](https://img.shields.io/badge/UI-Gradio-orange.svg)](https://gradio.app/)
+## 🚀 Overview
 
-![Whisper Transcriber Demo](https://raw.githubusercontent.com/yourusername/whisper-transcriber/main/docs/images/demo.png)
+Registra una nota vocale sul tuo iPhone → Caricala sul web → Ottieni un post LinkedIn pronto da pubblicare.
 
-## ✨ Features
+Il sistema utilizza:
+- **OpenAI Whisper API** per trascrizione vocale di alta qualità
+- **Claude 3.5 Sonnet** per elaborazione intelligente del testo
+- **Firebase Firestore** per database
+- **Cloudinary** per storage audio
+- **Render + Netlify** per hosting gratuito
 
-- 🗣️ **Accurate Speech Recognition** powered by OpenAI's Whisper models
-- 📂 **Single or Batch Processing** - transcribe one file or multiple files at once
-- 🌐 **Multiple Language Support** - works with numerous languages and accents
-- 🔄 **Model Selection** - choose from tiny to large models based on your needs
-- 💾 **Automatic Saving** - transcriptions saved with timestamps for easy reference
-- 🖥️ **Simple Web Interface** - no coding required to use
-- 📱 **Responsive Design** - works on desktop and mobile devices
+## 📋 Architettura
 
-## 📋 Table of Contents
-
-- [Installation](#-installation)
-- [Quick Start](#-quick-start)
-- [How It Works](#-how-it-works)
-- [Usage Guide](#-usage-guide)
-- [Model Options](#-model-options)
-- [Supported File Formats](#-supported-file-formats)
-- [Tips for Better Results](#-tips-for-better-results)
-- [Troubleshooting](#-troubleshooting)
-- [Contributing](#-contributing)
-- [License](#-license)
-
-## 🔧 Installation
-
-### Prerequisites
-
-- Python 3.7 or higher
-- pip (Python package installer)
-- FFmpeg (for audio processing)
-
-### Step 1: Clone the repository
-
-```bash
-git clone https://github.com/yourusername/whisper-transcriber.git
-cd whisper-transcriber
+```
+┌─────────────┐     ┌─────────────┐     ┌──────────────┐
+│   Frontend  │────▶│   Backend   │────▶│  External    │
+│  (Netlify)  │     │  (Render)   │     │   Services   │
+└─────────────┘     └─────────────┘     └──────────────┘
+      HTML              FastAPI           - OpenAI API
+   Tailwind CSS         Python            - Claude API  
+    Quill.js           uvicorn            - Cloudinary
+                                          - Firestore
 ```
 
-### Step 2: Create a virtual environment (recommended)
+## 🔧 Tecnologie Core
 
+### Backend (FastAPI + Python)
+- **FastAPI 0.104.1**: Framework web async ad alte prestazioni
+- **Python 3.11+**: Runtime principale
+- **Uvicorn**: ASGI server per produzione
+
+### AI Models
+- **OpenAI Whisper API** (`whisper-1`): Trascrizione audio
+  - Qualità superiore al 95% di accuratezza
+  - Supporto multilingua con focus italiano
+  - Costo: ~$0.006/minuto di audio
+
+- **Anthropic Claude 3.5 Sonnet** (`claude-3-5-sonnet-20241022`): 
+  - Modello più recente e performante
+  - Context window: 200K tokens
+  - Ottimizzato per scrittura creativa e professionale
+  - Costo: ~$0.003/1K token input, $0.015/1K output
+
+### Storage & Database
+- **Firebase Firestore**: NoSQL database per metadati
+  - Piano Spark gratuito (1GB storage, 50K letture/giorno)
+- **Cloudinary**: Storage audio cloud
+  - 25GB storage gratuito, no carta di credito
+
+### Hosting
+- **Render.com** (Backend): 
+  - Free tier: 750 ore/mese
+  - Auto-deploy da GitHub
+  - Cold start dopo 15 min inattività
+  
+- **Netlify** (Frontend):
+  - 100GB bandwidth gratuito
+  - Deploy istantaneo
+  - CDN globale
+
+## 💰 Costi per Utilizzo
+
+Per una nota vocale di 5 minuti:
+- Whisper API: ~$0.03
+- Claude API: ~$0.04  
+- **Totale: ~$0.07 per post**
+
+Infrastruttura: **$0** (tutto su tier gratuiti)
+
+## 🎯 Features Principali
+
+### Elaborazione Intelligente
+Il sistema usa un **prompt specializzato per LinkedIn** che:
+- Mantiene la tua voce autentica
+- Struttura il contenuto in formato narrativo
+- Aggiunge espressioni colloquiali italiane ("mah", "fidati", "una figata")
+- Crea hook iniziali d'impatto
+- Chiude con domande per engagement
+
+### Due Modalità
+1. **Post LinkedIn**: Ottimizzato per contenuti professionali
+2. **Nota Generale**: Per appunti e trascrizioni standard
+
+## 🛠️ Setup Locale
+
+### Prerequisiti
 ```bash
+python 3.11+
+node 14+
+```
+
+### Backend
+```bash
+cd backend
 python -m venv venv
-```
-
-Activate it:
-
-**Windows**:
-```bash
-venv\Scripts\activate
-```
-
-**macOS/Linux**:
-```bash
-source venv/bin/activate
-```
-
-### Step 3: Install dependencies
-
-```bash
+source venv/bin/activate  # Windows: venv\Scripts\activate
 pip install -r requirements.txt
-```
-
-> 📝 **Note**: If you don't have FFmpeg installed:
-> - **Windows**: Download from [here](https://ffmpeg.org/download.html) and add to PATH
-> - **macOS**: `brew install ffmpeg`
-> - **Ubuntu/Debian**: `sudo apt update && sudo apt install ffmpeg`
-
-## 🚀 Quick Start
-
-1. Run the application:
-
-```bash
 python app.py
 ```
 
-2. Open your browser and go to:
+### Frontend
+```bash
+cd frontend
+# Apri index.html nel browser o usa:
+python -m http.server 8080
 ```
-http://127.0.0.1:7860
+
+## 📝 Environment Variables
+
+```env
+# AI Services
+OPENAI_API_KEY=sk-proj-xxxxx          # Per Whisper API
+ANTHROPIC_API_KEY=sk-ant-api03-xxxxx  # Per Claude
+
+# Firebase (solo Firestore, no Storage)
+FIREBASE_SERVICE_ACCOUNT='{"type":"service_account"...}'
+
+# Cloudinary (storage audio)
+CLOUDINARY_CLOUD_NAME=dxxxxx
+CLOUDINARY_API_KEY=xxxxx
+CLOUDINARY_API_SECRET=xxxxx
 ```
 
-3. Select a Whisper model, upload an audio file, and click "Transcribe"
+## 🚀 Deploy
 
-4. Download the transcription text file when complete
+### Backend su Render
+1. Push su GitHub
+2. Connetti repository su Render
+3. Configura:
+   - Root Directory: `backend`
+   - Build: `pip install -r requirements.txt`
+   - Start: `uvicorn app:app --host 0.0.0.0 --port $PORT`
+4. Aggiungi environment variables
 
-## 🔍 How It Works
+### Frontend su Netlify
+1. Aggiorna `API_URL` in `index.html` con URL Render
+2. Drag & drop cartella `frontend` su Netlify
+3. Deploy automatico in 10 secondi
 
-Whisper Transcriber combines OpenAI's state-of-the-art Whisper speech recognition model with a user-friendly Gradio interface. Here's what happens behind the scenes:
+## 📊 Performance
 
-1. **Audio Input**: Upload your audio file(s) through the Gradio interface
-2. **Model Loading**: The selected Whisper model is loaded into memory
-3. **Transcription**: Whisper processes the audio and converts speech to text
-4. **Output**: Results are displayed in the interface and saved as a text file
+- **Trascrizione**: 2-5 secondi (Whisper API)
+- **Elaborazione**: 3-5 secondi (Claude)
+- **Upload audio**: Dipende da connessione
+- **Totale**: ~10-15 secondi per nota di 5 minuti
 
-The application uses cache management to avoid reloading models when processing multiple files with the same model, making batch processing efficient.
+## 🔐 Sicurezza
 
-## 📚 Usage Guide
+- API keys gestite tramite environment variables
+- CORS configurato per domini specifici in produzione
+- Firebase rules per accesso controllato
+- HTTPS automatico su Netlify/Render
 
-### Single File Transcription
+## 🐛 Troubleshooting
 
-1. Go to the "Single File" tab
-2. Select your preferred Whisper model
-3. Upload an audio file by clicking the upload area
-4. Click "Transcribe"
-5. View the transcription in the output box
-6. Download the transcription file using the provided link
+### "Render si addormenta"
+Usa [UptimeRobot](https://uptimerobot.com) per ping ogni 5 min
 
-### Multiple File Transcription
+### "Errore CORS"
+Verifica URL backend in `frontend/index.html`
 
-1. Go to the "More Files" tab
-2. Select your preferred Whisper model
-3. Upload multiple audio files by clicking the upload area
-4. Click "Transcribe All"
-5. View the combined transcriptions in the output box
-6. Download the complete transcription file using the provided link
+### "Upload fallito"  
+Max 25MB per file su Cloudinary free tier
 
-## 📊 Model Options
+## 📈 Ottimizzazioni Future
 
-| Model | Size | RAM Required | Speed | Accuracy | Best For |
-|-------|------|--------------|-------|----------|----------|
-| tiny  | 39M  | ~1GB         | Very Fast | Basic | Quick drafts, short clips |
-| base  | 74M  | ~1GB         | Fast | Good | General purpose |
-| small | 244M | ~2GB         | Medium | Better | Balanced option |
-| medium | 769M | ~5GB        | Slow | Very Good | Detailed transcription |
-| large | 1.5GB | ~10GB       | Very Slow | Excellent | Professional use |
+- [ ] Cache delle trascrizioni per audio identici
+- [ ] Batch processing per più note
+- [ ] Export diretto su LinkedIn API
+- [ ] Analytics su engagement dei post
+- [ ] Template multipli per diversi stili
 
-## 📁 Supported File Formats
+## 👨‍💻 Sviluppato da
 
-- MP3 (.mp3)
-- WAV (.wav)
-- M4A (.m4a)
-- FLAC (.flac)
-- OGG (.ogg)
-- AAC (.aac)
-
-## 💡 Tips for Better Results
-
-1. **Use Quality Audio**: Clearer audio with minimal background noise yields better transcriptions
-2. **Choose the Right Model**: 
-   - For short, simple recordings, "tiny" or "base" may be sufficient
-   - For important meetings or interviews, consider "medium" or "large"
-3. **Processing Long Files**: Split very long audio files for better results
-4. **Memory Management**: Larger models require more RAM - ensure your system has enough
-5. **Batch Processing**: Group similar audio files together for consistent results
-
-## 🔧 Troubleshooting
-
-### Common Issues
-
-1. **"CUDA out of memory"**
-   - Solution: Select a smaller model or free up GPU memory
-   
-2. **Slow processing times**
-   - Solution: Use a smaller model, consider GPU acceleration if available
-   
-3. **Poor transcription quality**
-   - Solution: Check audio quality, try a larger model, ensure audio is clear
-
-### Getting Help
-
-If you encounter any issues not covered here, please [open an issue](https://github.com/yourusername/whisper-transcriber/issues) on GitHub.
-
-## 👥 Contributing
-
-Contributions are welcome! If you'd like to improve Whisper Transcriber:
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-Please ensure your code follows the project's style and includes appropriate tests.
-
-## 📜 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+Raffaele Zarrelli - Sistema personale per content creation efficiente
 
 ---
 
-<p style="text-align: center;">
-  Made with ❤️ by <a href="https://github.com/Sarracin0" target="_blank" rel="noopener noreferrer">Raffaele Zarrelli</a>
-</p>
+**Note**: Questo è un progetto personale ottimizzato per uso individuale. Per uso commerciale, considerare upgrade dei tier di hosting e API.
