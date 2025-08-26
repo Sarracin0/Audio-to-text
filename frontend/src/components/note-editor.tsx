@@ -4,6 +4,7 @@ import dynamic from 'next/dynamic'
 import { Copy, Save } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { CostDisplay } from '@/components/cost-display'
 import { TranscriptionResponse } from '@/lib/api'
 
 // Dynamic import per MD Editor (non supporta SSR)
@@ -74,6 +75,11 @@ export function NoteEditor({
 
   return (
     <>
+      {/* Mostra i costi se disponibili */}
+      {transcription.cost && (
+        <CostDisplay cost={transcription.cost} />
+      )}
+
       {/* Trascrizione */}
       <Card>
         <CardHeader>

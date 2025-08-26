@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from 'react'
-import { FileAudio, Calendar, Trash2, Loader2 } from 'lucide-react'
+import { FileAudio, Calendar, Trash2, Loader2, DollarSign } from 'lucide-react'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import {
@@ -66,10 +66,18 @@ export function NoteCard({ note, onClick, onDelete }: NoteCardProps) {
                 <FileAudio className="h-4 w-4" />
                 {note.original_filename}
               </p>
-              <p className="text-sm text-muted-foreground flex items-center gap-2">
-                <Calendar className="h-3 w-3" />
-                {formatDate(note.created_at)}
-              </p>
+              <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                <span className="flex items-center gap-1">
+                  <Calendar className="h-3 w-3" />
+                  {formatDate(note.created_at)}
+                </span>
+                {note.cost_data && (
+                  <span className="flex items-center gap-1">
+                    <DollarSign className="h-3 w-3" />
+                    ${note.cost_data.total_cost_usd.toFixed(3)}
+                  </span>
+                )}
+              </div>
             </div>
             <div className="flex items-center gap-2">
               <span
@@ -110,9 +118,12 @@ export function NoteCard({ note, onClick, onDelete }: NoteCardProps) {
           </DialogHeader>
           <div className="py-4">
             <p className="text-sm font-medium">{note.original_filename}</p>
-            <p className="text-xs text-muted-foreground mt-1">
-              Creata il {formatDate(note.created_at)}
-            </p>
+            <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
+              <span>Creata il {formatDate(note.created_at)}</span>
+              {note.cost_data && (
+                <span>Costo: ${note.cost_data.total_cost_usd.toFixed(3)}</span>
+              )}
+            </div>
           </div>
           <DialogFooter>
             <Button

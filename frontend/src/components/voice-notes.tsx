@@ -5,7 +5,7 @@ import { Header } from '@/components/header'
 import { FileUpload } from '@/components/file-upload'
 import { ProcessingStatus } from '@/components/processing-status'
 import { NoteEditor } from '@/components/note-editor'
-import { NotesList } from './notes-list'
+import { NotesList } from '@/components/notes-list'
 import { apiService, Note, TranscriptionResponse } from '@/lib/api'
 
 interface ProcessingState {
@@ -84,7 +84,8 @@ export default function VoiceNotes() {
         id: noteId,
         transcription: response.note.transcription,
         processed: response.note.processed_text,
-        audio_url: response.note.audio_url
+        audio_url: response.note.audio_url,
+        cost: response.note.cost_data  // Includi i dati dei costi se presenti
       })
       // Converte HTML in markdown se necessario
       const markdownText = response.note.processed_text.replace(/<br>/g, '\n').replace(/<[^>]*>/g, '')

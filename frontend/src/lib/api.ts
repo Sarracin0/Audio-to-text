@@ -1,12 +1,30 @@
 // Configurazione semplice - cambia questo URL con quello del tuo backend
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000'
 
+export interface CostData {
+  whisper: {
+    duration_minutes: number
+    cost_usd: number
+  }
+  claude: {
+    model: string
+    input_tokens: number
+    output_tokens: number
+    input_cost_usd: number
+    output_cost_usd: number
+    total_cost_usd: number
+  }
+  total_cost_usd: number
+  total_cost_eur: number
+}
+
 export interface TranscriptionResponse {
   success: boolean
   id: string
   transcription: string
   processed: string
   audio_url: string
+  cost?: CostData  // Dati dei costi opzionali
 }
 
 export interface Note {
@@ -19,6 +37,8 @@ export interface Note {
   created_at: string
   timestamp?: string
   updated_at?: string
+  cost_data?: CostData  // Dati dei costi opzionali
+  audio_duration_minutes?: number
 }
 
 export interface NotesResponse {
