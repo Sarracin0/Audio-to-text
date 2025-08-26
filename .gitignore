@@ -1,18 +1,70 @@
-# Evita di tracciare gli ambienti virtuali
-venv/
-env/
-
-# File di dipendenze compilati
-*.pyc
+# Python
 __pycache__/
-*.pyo
-*.pyd
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
 
-# Configurazioni ed eseguibili locali
-.DS_Store
+# Environment variables
+.env
+.env.local
+.env.production
+
+# Firebase
+.firebase/
+firebase-debug.log
+firebase-debug.*.log
+firebaserc
+.firebaserc
+
+# IDE
 .vscode/
 .idea/
-*.log
+*.swp
+*.swo
+.DS_Store
 
-# File di dipendenze generati
-requirements.txt
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.tmp
+temp/
+tmp/
+trascrizione_*.txt
+
+# Audio files (opzionale, rimuovi se vuoi versionarli)
+*.mp3
+*.wav
+*.m4a
+*.flac
+*.ogg
+*.aac
+
+# Models cache
+models/
+*.pt
+*.pth
+
+# Node modules (se usi npm per Firebase tools)
+node_modules/
+package-lock.json

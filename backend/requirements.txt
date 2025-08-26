@@ -1,0 +1,15 @@
+fastapi
+uvicorn[standard]
+python-multipart
+python-dotenv
+aiofiles
+
+# AI/ML
+openai-whisper
+anthropic
+torch
+numpy
+
+# Cloud services
+firebase-admin
+cloudinary
